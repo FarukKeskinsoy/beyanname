@@ -2,6 +2,8 @@ const express = require('express')
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const puppeteer = require("puppeteer")
+var convert = require('xml-js');
+const axios = require('axios');
 
 const app = express();
 
@@ -110,66 +112,48 @@ app.post('/feedback', async (req, res) => {
         res.status(500).json('Hata');
     }
 });
-app.post('/currget', async (req, res) => {
-    //22160100EX00086241
-    console.log("req başladı")
+
+const getCurrency=async(d,m,y)=>{
+
+    let config = {
+        method: 'get',
+        maxBodyLength: Infinity,
+        url: `https://www.tcmb.gov.tr/kurlar/${y}${m}/${d}${m}${y}.xml`,
+        headers: { 
+            "Accept": "application/json",
+                "Accept-Encoding": "gzip, compress, deflate, br"
+        },
+        withCredentials: false,
+      };
     try {
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--disable-gpu',
-            ],
-        });
+        const response=await axios(config)
+        const xmlData = response.data;
 
-        const curr = await browser.newPage();
+        // Convert XML to JSON
+        const jsonData = convert.xml2json(xmlData, { compact: true, spaces: 4 });
 
-        // Extract feedback data from the request body
-        const date = req.body.date;
-     
-        // Perform actions based on feedback (e.g., click a button on the page)
-     
-        var currencyUSDtext;
-        var currencyEURtext;
-        const fixedcurrUrl = 'https://www.altinkaynak.com/Doviz/Kur';
-
-    
-            // Fixed URL
-                curr.goto(fixedcurrUrl, { waitUntil: 'networkidle2' });
-                await curr.waitForSelector('#cphMain_cphSubContent_dateInput');
-                await curr.waitForSelector('#cphMain_cphSubContent_btnSearch');
-                await curr.$eval('input[id=cphMain_cphSubContent_dateInput]', (el, dateStr) => {
-                    el.value = dateStr;
-                },date);
-                await curr.click('input[id=cphMain_cphSubContent_btnSearch]');
-
-                await page.$('.table')
-
-
-                const currencyUSD = await curr.evaluate(() => {
-
-                    const anchorBuy = document.querySelector('#tdUSDBuy');
-                    return anchorBuy?.textContent || "";
-                });
-                const currencyEUR = await curr.evaluate(() => {
-                    const anchorBuy = document.querySelector('#tdEURBuy');
-                    return anchorBuy?.textContent || "";
-                });
+        return JSON.parse(jsonData);
         
-                currencyUSDtext=currencyUSD;
-                currencyEURtext=currencyEUR;
-                await curr.close();
-
-        // Send a response acknowledging the feedback
-        res.status(200).json({currencyUSDtext,currencyEURtext});
-    } catch (err) {
-        console.error(err);
-        res.status(500).json('Hata');
+        
+    }catch (error) {
+        return error
+    }     
+      
+}
+app.post("/currs", async(req, res) => {
+    const d=req.body.d;
+    const m=req.body.m;
+    const y=req.body.y;
+    try {
+      const result = await getCurrency(d,m,y);
+      res.json({ result });
+      console.log({ result });
+    } catch (error) {
+      console.error('Error in /money endpoint:', error);
+      res.status(500).json({ error: 'Money API error' });
     }
-});
+      });
+
 
 
 app.listen(process.env.PORT || 5002 ,()=>{
