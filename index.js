@@ -24,14 +24,21 @@ app.post('/declaration', async (req, res) => {
         // Extract additional inputs from the request body
         
         const browser = await puppeteer.launch({
-            args: ['--no-sandbox'],
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu',
+            ],
         });
-        [page] = await browser.pages();
+        page = await browser.newPage();
         
         
         // Fixed URL
         const fixedUrl = 'https://uygulama.gtb.gov.tr/BeyannameSorgulama/';
-        await page.goto(fixedUrl, { waitUntil: 'networkidle0' });
+        page.goto(fixedUrl, { waitUntil: 'networkidle2' });
 
         // Set the values in the input fields
         
@@ -66,14 +73,8 @@ app.post('/declaration', async (req, res) => {
 
 app.post('/feedback', async (req, res) => {
     //22160100EX00086241
-    console.log("req başladı")
     try {
-        const browser = await puppeteer.launch({
-            args: ['--no-sandbox'],
-        });
-
-        const [curr] = await browser.pages();
-
+    
         // Extract feedback data from the request body
         const verificationCode = req.body.verificationCode;
         const declarationNo = req.body.declarationNo;
@@ -98,37 +99,52 @@ app.post('/feedback', async (req, res) => {
             const anchor = document.querySelector('#LabelDurum');
             return anchor.textContent;
         });
+        
+        
+        await page.close();
+        
+        // Send a response acknowledging the feedback
+        res.status(200).json({text,statuetext});
+    } catch (err) {
+        console.error(err);
+        res.status(500).json('Hata');
+    }
+});
+app.post('/currget', async (req, res) => {
+    //22160100EX00086241
+    console.log("req başladı")
+    try {
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--disable-gpu',
+            ],
+        });
+
+        const curr = await browser.newPage();
+
+        // Extract feedback data from the request body
+        const date = req.body.date;
+     
+        // Perform actions based on feedback (e.g., click a button on the page)
+     
         var currencyUSDtext;
         var currencyEURtext;
-        const dateRegex = /Kapanma Tarihi: (\d{2})\.(\d{2})\.(\d{4})/;
-        const match = dateRegex.exec(text);
-        if (match && match[1] && match[2] && match[3]) {
-
-            const day = match[1];
-            const month = match[2];
-            const year = match[3];
-            
-            // Construct the date string in the "DD/MM/YYYY" format
-            const dateString = `${day}/${month}/${year}`;
-            const dateObjString = `${month}/${day}/${year}`;
-            var date = new Date(dateObjString);
-            var yesterday = new Date(dateObjString);
-            yesterday.setDate(date.getDate() - 1);
-
-            console.log("Extracted Date:", dateString);
-            const fixedcurrUrl = 'https://www.altinkaynak.com/Doviz/Kur';
+        const fixedcurrUrl = 'https://www.altinkaynak.com/Doviz/Kur';
 
     
             // Fixed URL
-                await curr.goto(fixedcurrUrl, { waitUntil: 'networkidle0' });
-                console.log(curr.content())
+                curr.goto(fixedcurrUrl, { waitUntil: 'networkidle2' });
                 await curr.waitForSelector('#cphMain_cphSubContent_dateInput');
                 await curr.waitForSelector('#cphMain_cphSubContent_btnSearch');
                 await curr.$eval('input[id=cphMain_cphSubContent_dateInput]', (el, dateStr) => {
                     el.value = dateStr;
-                },yesterday.toLocaleDateString("tr"));
+                },date);
                 await curr.click('input[id=cphMain_cphSubContent_btnSearch]');
-
                 await curr.waitForSelector('#trUSD');
                 await curr.waitForSelector('#trEUR');
 
@@ -143,19 +159,10 @@ app.post('/feedback', async (req, res) => {
         
         currencyUSDtext=currencyUSD;
         currencyEURtext=currencyEUR;
-
-          } else {
-            console.log("Date not found in the text.");
-          }
-        console.log(text);
-        console.log("USD",currencyUSDtext);
-        console.log("EUR",currencyEURtext);
-    
-        await page.close();
         await curr.close();
 
         // Send a response acknowledging the feedback
-        res.status(200).json({text,statuetext,currencyUSDtext,currencyEURtext});
+        res.status(200).json({currencyUSDtext,currencyEURtext});
     } catch (err) {
         console.error(err);
         res.status(500).json('Hata');
