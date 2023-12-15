@@ -23,7 +23,9 @@ app.post('/declaration', async (req, res) => {
     try {
         // Extract additional inputs from the request body
         
-        const browser = await puppeteer.launch();
+        const browser = await puppeteer.launch({
+            args: ['--no-sandbox'],
+        });
         [page] = await browser.pages();
         
         
@@ -66,7 +68,9 @@ app.post('/feedback', async (req, res) => {
     //22160100EX00086241
     console.log("req başladı")
     try {
-        const browser = await puppeteer.launch();
+        const browser = await puppeteer.launch({
+            args: ['--no-sandbox'],
+        });
 
         const [curr] = await browser.pages();
 
