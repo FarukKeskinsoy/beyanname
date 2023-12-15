@@ -146,13 +146,17 @@ app.post('/currget', async (req, res) => {
                 },date);
                 await curr.click('input[id=cphMain_cphSubContent_btnSearch]');
 
+                await page.$('.table')
+
+
                 const currencyUSD = await curr.evaluate(() => {
+
                     const anchorBuy = document.querySelector('#tdUSDBuy');
-                    return anchorBuy.textContent;
+                    return anchorBuy?.textContent || "";
                 });
                 const currencyEUR = await curr.evaluate(() => {
                     const anchorBuy = document.querySelector('#tdEURBuy');
-                    return anchorBuy.textContent;
+                    return anchorBuy?.textContent || "";
                 });
         
                 currencyUSDtext=currencyUSD;
