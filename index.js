@@ -83,6 +83,9 @@ app.post('/feedback', async (req, res) => {
         console.log(verificationCode,declarationNo)
 
         // Perform actions based on feedback (e.g., click a button on the page)
+        await page.waitForSelector('#txtBeyannameNo');
+        await page.waitForSelector('#txtDogrulamaKodu');
+        
         await page.$eval('input[name=txtBeyannameNo]', (el, declarationNoValue) => {
             el.value = declarationNoValue;
         }, declarationNo);
@@ -140,19 +143,30 @@ const getCurrency=async(d,m,y)=>{
     }     
       
 }
-app.post("/currs", async(req, res) => {
-    const d=req.body.d;
-    const m=req.body.m;
-    const y=req.body.y;
+app.post('/currs', async (req, res) => {
+    const d = req.body.d;
+    const m = req.body.m; // Use req.body.m for month
+    const y = req.body.y; // Use req.body.y for year
+  
     try {
-      const result = await getCurrency(d,m,y);
-      res.json({ result });
+      const result = await getCurrency(d, m, y);
+  
+      res.status(200).json({ result });
       console.log({ result });
     } catch (error) {
       console.error('Error in /money endpoint:', error);
-      res.status(500).json({ error: 'Money API error' });
+      if (error.response && error.response.status === 404) {
+        res
+          .status(404)
+          .json({
+            errText:
+              'Resmi tatil, hafta sonu ve yarım iş günü çalısılan günlerde gösterge niteliginde kur bilgisi yayımlanmamaktadır.',
+          });
+      } else {
+        res.status(500).json({ error: 'TCMB API error' });
+      }
     }
-      });
+  });
 
 
 
